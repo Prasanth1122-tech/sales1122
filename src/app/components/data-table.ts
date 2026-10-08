@@ -48,14 +48,24 @@ type SortDirection = 'asc' | 'desc';
             Add Record
           </button>
 
-          <!-- Download CSV -->
+          <!-- Export Excel (.xlsx) -->
+          <button
+            type="button"
+            (click)="salesService.downloadFilteredExcel()"
+            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/70 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 font-semibold text-xs shadow-xs transition-colors cursor-pointer"
+            title="Download current filtered data in Excel format (.xlsx)">
+            <mat-icon class="text-sm text-[#107c41] dark:text-emerald-400">table_view</mat-icon>
+            Export Excel
+          </button>
+
+          <!-- Export CSV -->
           <button
             type="button"
             (click)="salesService.downloadFilteredCsv()"
-            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-medium text-xs shadow-xs transition-colors cursor-pointer"
+            class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-medium text-xs shadow-xs transition-colors cursor-pointer"
             title="Download current filtered data as CSV">
-            <mat-icon class="text-sm">download</mat-icon>
-            Export CSV
+            <mat-icon class="text-sm text-slate-500 dark:text-slate-400">description</mat-icon>
+            CSV
           </button>
         </div>
       </div>

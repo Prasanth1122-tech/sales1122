@@ -98,14 +98,69 @@ import { RevenueForecast } from './components/revenue-forecast';
                 </button>
               }
 
-              <!-- Export CSV -->
-              <button
-                type="button"
-                (click)="salesService.downloadFilteredCsv()"
-                class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold transition-colors cursor-pointer">
-                <mat-icon class="text-sm text-slate-500 dark:text-slate-400">file_download</mat-icon>
-                Export CSV
-              </button>
+              <!-- Export Excel (.xlsx) & Format Dropdown -->
+              <div class="relative inline-flex items-center">
+                <button
+                  type="button"
+                  (click)="salesService.downloadFilteredExcel()"
+                  class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#107c41] hover:bg-[#0b5d30] text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+                  title="Download filtered sales data in Excel (.xlsx) format">
+                  <mat-icon class="text-sm">table_view</mat-icon>
+                  <span>Export Excel</span>
+                </button>
+
+                <button
+                  type="button"
+                  (click)="toggleExportMenu()"
+                  class="ml-1 p-2 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs transition-colors cursor-pointer"
+                  [title]="showExportMenu() ? 'Close export options' : 'More download options (.xlsx, .csv)'">
+                  <mat-icon class="text-xs">arrow_drop_down</mat-icon>
+                </button>
+
+                <!-- Export format dropdown -->
+                @if (showExportMenu()) {
+                  <div class="fixed inset-0 z-30" (click)="showExportMenu.set(false)"></div>
+                  <div class="absolute right-0 top-full mt-1.5 w-60 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl py-1.5 z-40 text-xs animate-in fade-in">
+                    <button
+                      type="button"
+                      (click)="salesService.downloadFilteredExcel(); showExportMenu.set(false)"
+                      class="w-full text-left px-3.5 py-2.5 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 flex items-center gap-2.5 text-slate-800 dark:text-slate-100 cursor-pointer">
+                      <mat-icon class="text-base text-[#107c41]">table_view</mat-icon>
+                      <div class="flex-1">
+                        <div class="font-bold flex items-center gap-1.5 text-emerald-900 dark:text-emerald-200">
+                          Excel (.xlsx)
+                          <span class="text-[9px] uppercase px-1 py-0.2 bg-emerald-100 dark:bg-emerald-900 text-emerald-800 dark:text-emerald-200 rounded font-bold">Standard</span>
+                        </div>
+                        <div class="text-[10px] text-slate-500 dark:text-slate-400">Transactions, KPIs & summaries</div>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      (click)="salesService.downloadFilteredCsv(); showExportMenu.set(false)"
+                      class="w-full text-left px-3.5 py-2 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2.5 text-slate-700 dark:text-slate-200 cursor-pointer">
+                      <mat-icon class="text-base text-slate-500">description</mat-icon>
+                      <div>
+                        <div class="font-bold">CSV File (.csv)</div>
+                        <div class="text-[10px] text-slate-400">Plain comma-delimited rows</div>
+                      </div>
+                    </button>
+
+                    <div class="my-1 border-t border-slate-100 dark:border-slate-700"></div>
+
+                    <button
+                      type="button"
+                      (click)="salesService.downloadExcelTemplate(); showExportMenu.set(false)"
+                      class="w-full text-left px-3.5 py-2 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2.5 text-slate-700 dark:text-slate-200 cursor-pointer">
+                      <mat-icon class="text-base text-blue-500">file_download</mat-icon>
+                      <div>
+                        <div class="font-bold">Blank Template (.xlsx)</div>
+                        <div class="text-[10px] text-slate-400">Template formatted for upload</div>
+                      </div>
+                    </button>
+                  </div>
+                }
+              </div>
 
               <!-- Mobile Filters Toggle -->
               <button
@@ -132,11 +187,19 @@ import { RevenueForecast } from './components/revenue-forecast';
             <span>{{ salesService.filteredData().length }} matching records</span>
           </div>
 
-          <div class="flex items-center gap-2">
+          <div class="flex flex-wrap items-center gap-2">
             <span class="inline-flex items-center gap-1 text-[11px] text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-md font-medium border border-emerald-200 dark:border-emerald-800">
               <mat-icon class="text-xs">check_circle</mat-icon>
               Columns Verified: Date, Product, Category, Region, Sales, Quantity, Profit
             </span>
+            <button
+              type="button"
+              (click)="salesService.downloadExcelTemplate()"
+              class="inline-flex items-center gap-1 text-[11px] text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 font-medium underline underline-offset-2 cursor-pointer"
+              title="Download empty Excel template (.xlsx)">
+              <mat-icon class="text-xs">download</mat-icon>
+              Excel Template
+            </button>
           </div>
         </div>
 
@@ -259,9 +322,14 @@ export class App {
   readonly themeService = inject(ThemeService);
   readonly showMobileFilters = signal<boolean>(false);
   readonly showAddModal = signal<boolean>(false);
+  readonly showExportMenu = signal<boolean>(false);
 
   toggleMobileFilters(): void {
     this.showMobileFilters.update(v => !v);
+  }
+
+  toggleExportMenu(): void {
+    this.showExportMenu.update(v => !v);
   }
 
   onFileSelected(event: Event): void {

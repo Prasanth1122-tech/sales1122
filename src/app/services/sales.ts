@@ -640,27 +640,123 @@ export class SalesService {
     }
   }
 
-  // Download template for Excel / CSV upload
-  downloadTemplate(): void {
-    const headers = ['Date', 'Product', 'Category', 'Region', 'Sales', 'Quantity', 'Profit'];
-    const sampleRows = [
-      ['2026-01-15', 'Wireless Earbuds', 'Electronics', 'West', '249.99', '2', '65.50'],
-      ['2026-02-04', 'Running Shoes', 'Sports', 'North', '135.00', '1', '42.20'],
-      ['2026-02-18', 'Coffee Maker', 'Home & Kitchen', 'East', '89.50', '3', '28.00'],
-      ['2026-03-10', 'Denim Jacket', 'Clothing', 'South', '110.00', '2', '35.00'],
-      ['2026-03-22', 'Yoga Mat', 'Sports', 'West', '45.00', '5', '18.75']
+  // Download filtered data as Excel (.xlsx) format
+  downloadFilteredExcel(): void {
+    const list = this.filteredData();
+    if (!list.length) {
+      this.uploadFeedback.set({
+        type: 'warning',
+        message: 'No matching records to export under current filters.'
+      });
+      return;
+    }
+
+    // 1. Transactions Sheet
+    const dataRows = list.map(item => ({
+      'Date': item.Date,
+      'Product': item.Product,
+      'Category': item.Category,
+      'Region': item.Region,
+      'Sales': item.Sales,
+      'Quantity': item.Quantity,
+      'Profit': item.Profit
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(dataRows);
+
+    // Set readable column widths
+    worksheet['!cols'] = [
+      { wch: 14 }, // Date
+      { wch: 28 }, // Product
+      { wch: 20 }, // Category
+      { wch: 16 }, // Region
+      { wch: 14 }, // Sales
+      { wch: 10 }, // Quantity
+      { wch: 14 }  // Profit
     ];
 
-    const csvContent = [headers.join(','), ...sampleRows.map(r => r.join(','))].join('\r\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', 'sales_upload_template.csv');
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    // Enable Excel autofilter on all data columns
+    if (dataRows.length > 0) {
+      worksheet['!autofilter'] = { ref: `A1:G${dataRows.length + 1}` };
+    }
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Sales Data');
+
+    // 2. Executive Summary Sheet
+    const kpis = this.kpis();
+    const summaryRows = [
+      { 'Metric': 'Report Name', 'Value': 'Filtered Sales Analytics Report' },
+      { 'Metric': 'Export Date', 'Value': new Date().toISOString().substring(0, 10) },
+      { 'Metric': 'Total Revenue ($)', 'Value': kpis.totalSales },
+      { 'Metric': 'Total Gross Profit ($)', 'Value': kpis.totalProfit },
+      { 'Metric': 'Overall Profit Margin (%)', 'Value': `${kpis.profitMargin}%` },
+      { 'Metric': 'Total Orders / Transactions', 'Value': kpis.totalOrders },
+      { 'Metric': 'Total Units Sold', 'Value': kpis.totalQuantity },
+      { 'Metric': 'Average Order Value ($)', 'Value': kpis.avgOrderValue },
+      { 'Metric': 'Active Date Range', 'Value': `${this.startDate()} to ${this.endDate()}` },
+      { 'Metric': 'Regions Filtered', 'Value': this.selectedRegions().join(', ') || 'All Regions' },
+      { 'Metric': 'Categories Filtered', 'Value': this.selectedCategories().join(', ') || 'All Categories' },
+      { 'Metric': 'Source Dataset', 'Value': this.datasetName() }
+    ];
+    const summarySheet = XLSX.utils.json_to_sheet(summaryRows);
+    summarySheet['!cols'] = [{ wch: 30 }, { wch: 36 }];
+    XLSX.utils.book_append_sheet(workbook, summarySheet, 'Executive Summary');
+
+    // 3. Category Breakdown Sheet
+    const catData = this.categorySales().map(c => ({
+      'Category': c.category,
+      'Sales ($)': c.sales,
+      'Share (%)': `${c.percentage}%`
+    }));
+    if (catData.length) {
+      const catSheet = XLSX.utils.json_to_sheet(catData);
+      catSheet['!cols'] = [{ wch: 22 }, { wch: 16 }, { wch: 12 }];
+      XLSX.utils.book_append_sheet(workbook, catSheet, 'Category Performance');
+    }
+
+    // 4. Regional Performance Sheet
+    const regData = this.regionPerformance().map(r => ({
+      'Region': r.region,
+      'Sales ($)': r.sales,
+      'Profit ($)': r.profit
+    }));
+    if (regData.length) {
+      const regSheet = XLSX.utils.json_to_sheet(regData);
+      regSheet['!cols'] = [{ wch: 18 }, { wch: 16 }, { wch: 16 }];
+      XLSX.utils.book_append_sheet(workbook, regSheet, 'Regional Performance');
+    }
+
+    const dateStr = new Date().toISOString().substring(0, 10);
+    const filename = `sales_report_${dateStr}.xlsx`;
+    XLSX.writeFile(workbook, filename);
+
+    this.uploadFeedback.set({
+      type: 'success',
+      message: `Downloaded Excel report (${filename}) with ${list.length.toLocaleString()} records and executive summaries.`
+    });
+  }
+
+  // Download template for Excel / CSV upload
+  downloadTemplate(): void {
+    this.downloadExcelTemplate();
+  }
+
+  // Download template specifically as Excel (.xlsx)
+  downloadExcelTemplate(): void {
+    const sampleRows = [
+      { Date: '2026-01-15', Product: 'Wireless Earbuds', Category: 'Electronics', Region: 'West', Sales: 249.99, Quantity: 2, Profit: 65.50 },
+      { Date: '2026-02-04', Product: 'Running Shoes', Category: 'Sports', Region: 'North', Sales: 135.00, Quantity: 1, Profit: 42.20 },
+      { Date: '2026-02-18', Product: 'Coffee Maker', Category: 'Home & Kitchen', Region: 'East', Sales: 89.50, Quantity: 3, Profit: 28.00 },
+      { Date: '2026-03-10', Product: 'Denim Jacket', Category: 'Clothing', Region: 'South', Sales: 110.00, Quantity: 2, Profit: 35.00 },
+      { Date: '2026-03-22', Product: 'Yoga Mat', Category: 'Sports', Region: 'West', Sales: 45.00, Quantity: 5, Profit: 18.75 }
+    ];
+
+    const ws = XLSX.utils.json_to_sheet(sampleRows);
+    ws['!cols'] = [{ wch: 14 }, { wch: 22 }, { wch: 18 }, { wch: 14 }, { wch: 12 }, { wch: 10 }, { wch: 12 }];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Sales Data Template');
+    XLSX.writeFile(wb, 'sales_upload_template.xlsx');
   }
 
   // Download filtered data as CSV
